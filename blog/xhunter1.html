@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abusing xhunter1.sys — Anden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="../index.html">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></a>
+    <div class="nav-links">
+      <a href="../index.html#work">work</a>
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#journal">journal</a>
+      <a href="../index.html#contact">contact</a>
+    </div>
+  </div>
+</nav>
+
+<main style="position:relative;z-index:1;padding:60px 0 120px">
+  <div class="wrap">
+    <a class="back-link" href="../index.html">← back</a>
+
+    <article class="article">
+      <div class="post-meta">
+        <span>Reverse Engineering</span><span class="dot">·</span>
+        <span>June 4, 2025</span><span class="dot">·</span>
+        <span class="read">12 min read</span>
+      </div>
+      <h1>Abusing xhunter1.sys —<br>How I Used <em>XIGNCODE3</em>'s Own Driver Against Other Games</h1>
+      <p class="dek">XIGNCODE3 installs a kernel driver that exposes commands to open handles, read memory, and write memory on any process — with no filtering on which process you target. Here's how I found it during the pandemic and used it against games protected by EAC and BattleEye.</p>
+      <div class="byline">
+        <div class="avatar">AN</div>
+        <div>
+          <div class="who">Anden</div>
+          <div class="role">Reverse Engineer</div>
+        </div>
+      </div>
+
+      <div class="abody">
+        <p>Back during the pandemic I was playing Special Force, a Korean FPS that uses XIGNCODE3 as its anti-cheat. At some point I got curious and started poking around the driver it installs — <code>xhunter1.sys</code>. I found a bunch of interesting kernel commands in there and the first thing that crossed my mind was: what if I use these against other games?</p>
+
+        <p>So I tried it. Pointed the driver's commands at games protected by EAC, BattleEye, and others. It worked. No ban.</p>
+
+        <p>I kept it to myself for a while because it was genuinely useful and I didn't want it patched. But this stuff is old now, other people have started talking about similar techniques, and the specific driver version I reversed is already out of date. So here's how it worked and how I found it.</p>
+
+        <p>The exact command IDs and offsets I'm not going to give you — the current version of xhunter1.sys might be different, and honestly finding them yourself is part of it. I'll show you what to look for and what the commands do. The rest is on you.</p>
+
+        <div class="note">
+          <div>
+            <b>Note · Version</b>
+            This was reversed during 2020–2021 on driver version 10.0.10011.16384 compiled 2018-03-29. The current version of XIGNCODE3 may have changed the packet format or command IDs. Reverse it yourself on whatever version you have.
+          </div>
+        </div>
+
+        <h2>Getting the driver loaded</h2>
+        <p>Install any game that ships with XIGNCODE3 and launch it. Black Desert Online, Blade &amp; Soul, ArcheAge, Special Force — plenty of options. The driver loads automatically at game start.</p>
+
+        <p>Once it's running you can check:</p>
+
+<pre>sc query xhunter1</pre>
+
+        <p>If the game is open, that'll show it as running. The binary itself lives at <code>C:\Windows\System32\drivers\xhunter1.sys</code> after the game installs. The device is at <code>\\.\xhunter1</code>. You can test if it's up just by trying to open it:</p>
+
+<pre>HANDLE h = CreateFileW(L"\\\\.\\xhunter1", GENERIC_READ | GENERIC_WRITE,
+                        0, nullptr, OPEN_EXISTING, 0, nullptr);</pre>
+
+        <p>If that doesn't return <code>INVALID_HANDLE_VALUE</code>, the driver is running and you're in.</p>
+
+        <h2>Figuring out the packet format</h2>
+        <p>Load <code>xhunter1.sys</code> in IDA or Ghidra. Find <code>DriverEntry</code> and look for what gets assigned to <code>MajorFunction</code> in the <code>DRIVER_OBJECT</code> — that gives you the IRP handlers. The one you care about is <code>IRP_MJ_WRITE</code>, which is how all communication happens.</p>
+
+        <p>Inside the write handler, right near the top, you'll see two comparisons:</p>
+
+<pre>cmp dword ptr [buffer], 0x270
+cmp dword ptr [buffer+4], 0x345821AB</pre>
+
+        <p>Those are the validation checks. Every packet needs <code>size = 0x270</code> and <code>magic = 0x345821AB</code> or the driver rejects it immediately.</p>
+
+        <p>Keep going. A few instructions later it reads a QWORD from <code>[buffer+0x10]</code> and uses it as a write destination — that's a pointer to your response buffer. The driver writes the response directly to whatever address you put there. At <code>[buffer+0x0C]</code> is the command ID, which gets looked up in a dispatch table. So the full request structure is:</p>
+
+<pre>#pragma pack(push, 1)
+struct XHZ_REQUEST {
+    uint32_t size;        // 0x270
+    uint32_t magic;       // 0x345821AB
+    uint32_t req_id;      // random, echoed back as ~req_id
+    uint32_t cmd_id;      // command
+    uint64_t res_ptr;     // your response buffer pointer
+    uint8_t  body[0x258]; // parameters
+};
+#pragma pack(pop)</pre>
+
+        <p>For the response, search the binary for <code>0x12121212</code>. You'll find it being stored into a buffer — that's the response magic. The full response is <code>0x2FA</code> bytes. Same header layout as the request but with magic <code>0x12121212</code> and <code>req_id</code> bitwise-flipped to <code>~original_req_id</code>.</p>
+
+<pre>#pragma pack(push, 1)
+struct XHZ_RESPONSE {
+    uint32_t size;
+    uint32_t magic;          // 0x12121212
+    uint32_t req_id;         // ~your_req_id
+    uint8_t  result[0x2EE];
+};
+#pragma pack(pop)</pre>
+
+        <h2>Finding the commands</h2>
+        <p>Go through the dispatch table handlers one by one. Each handler calls specific kernel APIs, and those tell you exactly what it does. Since everything is imported from <code>ntoskrnl.exe</code>, just look at the import calls inside each function.</p>
+
+        <p><b>Open handle</b> — the handler that calls both <code>PsLookupProcessByProcessId</code> and <code>ObOpenObjectByPointer</code>. Body is a PID and an access mask.</p>
+
+        <p><b>Read memory</b> — calls <code>ObReferenceObjectByHandle</code>, then <code>MmProbeAndLockPages</code>, then <code>MmMapLockedPagesSpecifyCache</code>. Body is a process handle, a virtual address, and a byte count.</p>
+
+        <p><b>Write memory</b> — calls <code>KeStackAttachProcess</code> and <code>MmProbeAndLockPages</code>. Body is a PID, virtual address, size, and the data to write.</p>
+
+        <p><b>Module enumeration</b> — calls <code>KeStackAttachProcess</code> but no MDL functions. Walks the PEB loader list. Body is a PID.</p>
+
+        <p>Note down the command ID from the dispatch table entry that points to each handler. That number goes in <code>cmd_id</code>.</p>
+
+        <h2>Sending packets</h2>
+
+<pre>XHZ_RESPONSE* send(HANDLE device, uint32_t cmd,
+                   const void* body, size_t body_len) {
+    auto req = new XHZ_REQUEST{};
+    auto res = new XHZ_RESPONSE{};
+
+    req-&gt;size    = 0x270;
+    req-&gt;magic   = 0x345821AB;
+    req-&gt;req_id  = rand();
+    req-&gt;cmd_id  = cmd;
+    req-&gt;res_ptr = (uint64_t)res;
+
+    if (body &amp;&amp; body_len)
+        memcpy(req-&gt;body, body, body_len);
+
+    DWORD written = 0;
+    if (!WriteFile(device, req, sizeof(XHZ_REQUEST), &amp;written, nullptr)
+        || written != sizeof(XHZ_RESPONSE)
+        || res-&gt;magic != 0x12121212
+        || ~res-&gt;req_id != req-&gt;req_id) {
+        delete req;
+        delete res;
+        return nullptr;
+    }
+
+    delete req;
+    return res;
+}</pre>
+
+        <h2>Opening a handle to any process</h2>
+        <p>The open-handle command uses <code>ObOpenObjectByPointer</code> from kernel mode. That bypasses the Object Manager's access checks and it skips every OB callback on the system — meaning other anti-cheats that registered handle-stripping callbacks won't fire. You get exactly the access mask you asked for, for any process.</p>
+
+<pre>#pragma pack(push, 1)
+struct OpenHandleReq { uint32_t pid, access; };
+struct OpenHandleRes { uint32_t status; HANDLE handle; };
+#pragma pack(pop)
+
+HANDLE open_process(HANDLE device, uint32_t cmd, DWORD pid, DWORD access) {
+    OpenHandleReq req{ pid, access };
+    auto res = send(device, cmd, &amp;req, sizeof(req));
+    if (!res) return INVALID_HANDLE_VALUE;
+
+    auto out = (OpenHandleRes*)res-&gt;result;
+    HANDLE h = out-&gt;status == 0 ? out-&gt;handle : INVALID_HANDLE_VALUE;
+    delete res;
+    return h;
+}</pre>
+
+<pre>HANDLE hTarget = open_process(device, OPEN_HANDLE_CMD, target_pid, PROCESS_ALL_ACCESS);</pre>
+
+        <p>The returned handle works with any Win32 API that takes a process handle — <code>ReadProcessMemory</code>, <code>WriteProcessMemory</code>, <code>CreateRemoteThread</code>, all of it. Or use the driver's own read/write commands if you want to stay in kernel land.</p>
+
+        <h2>Reading memory</h2>
+        <p>The read command maps pages via MDL, so protection flags don't matter. <code>PAGE_GUARD</code>, <code>PAGE_NOACCESS</code> — irrelevant. If the page exists in physical memory, you read it.</p>
+
+<pre>#pragma pack(push, 1)
+struct ReadReq {
+    HANDLE   hProcess;
+    uint32_t _pad;
+    uint64_t address;
+    uint32_t size;
+};
+struct ReadRes {
+    uint32_t status, bytes_read;
+    uint8_t  data[1];
+};
+#pragma pack(pop)
+
+bool read_mem(HANDLE device, uint32_t cmd, HANDLE hProcess,
+              uint64_t addr, void* out, uint32_t size) {
+    ReadReq req{ hProcess, 0, addr, size };
+    auto res = send(device, cmd, &amp;req, sizeof(req));
+    if (!res) return false;
+
+    auto r = (ReadRes*)res-&gt;result;
+    if (r-&gt;status == 0)
+        memcpy(out, r-&gt;data, min(r-&gt;bytes_read, size));
+
+    bool ok = r-&gt;status == 0;
+    delete res;
+    return ok;
+}</pre>
+
+<pre>float hp = 0.f;
+read_mem(device, READ_CMD, hTarget, health_addr, &amp;hp, sizeof(hp));</pre>
+
+        <h2>Writing memory</h2>
+        <p>Write goes through the same MDL path. Page protection doesn't stop it, and it writes at the physical level so <code>.text</code> sections marked read-only are fair game too.</p>
+
+<pre>#pragma pack(push, 1)
+struct WriteReq {
+    uint32_t pid, _pad;
+    uint64_t address;
+    uint32_t size;
+    uint8_t  data[1];
+};
+#pragma pack(pop)
+
+bool write_mem(HANDLE device, uint32_t cmd, DWORD pid,
+               uint64_t addr, const void* buf, uint32_t size) {
+    auto total = offsetof(WriteReq, data) + size;
+    auto req   = (WriteReq*)_alloca(total);
+    memset(req, 0, total);
+    req-&gt;pid     = pid;
+    req-&gt;address = addr;
+    req-&gt;size    = size;
+    memcpy(req-&gt;data, buf, size);
+
+    auto res = send(device, cmd, req, total);
+    if (!res) return false;
+
+    bool ok = *(uint32_t*)res-&gt;result == 0;
+    delete res;
+    return ok;
+}</pre>
+
+<pre>float godmode = 99999.f;
+write_mem(device, WRITE_CMD, target_pid, health_addr, &amp;godmode, sizeof(godmode));</pre>
+
+        <h2>Getting module bases</h2>
+        <p>The module enum command attaches to the process and walks its <code>PEB.Ldr</code> — the same linked list Windows uses to track loaded DLLs. Gives you name, base, and size for everything loaded.</p>
+
+<pre>#pragma pack(push, 1)
+struct EnumModReq { uint32_t pid, max; };
+struct ModEntry {
+    uint64_t base;
+    uint32_t size, _pad;
+    wchar_t  name[260];
+};
+struct EnumModRes {
+    uint32_t status, count;
+    ModEntry entries[1];
+};
+#pragma pack(pop)
+
+uint64_t get_module(HANDLE device, uint32_t cmd,
+                    DWORD pid, const wchar_t* name) {
+    EnumModReq req{ pid, 128 };
+    auto res = send(device, cmd, &amp;req, sizeof(req));
+    if (!res) return 0;
+
+    auto r = (EnumModRes*)res-&gt;result;
+    uint64_t base = 0;
+    for (uint32_t i = 0; i &lt; r-&gt;count &amp;&amp; !base; i++)
+        if (_wcsicmp(r-&gt;entries[i].name, name) == 0)
+            base = r-&gt;entries[i].base;
+
+    delete res;
+    return base;
+}</pre>
+
+<pre>auto base  = get_module(device, ENUM_MOD_CMD, pid, L"game.exe");
+auto unity = get_module(device, ENUM_MOD_CMD, pid, L"UnityPlayer.dll");</pre>
+
+        <h2>Full example</h2>
+
+<pre>int main() {
+    srand((unsigned)time(nullptr));
+
+    HANDLE device = CreateFileW(L"\\\\.\\xhunter1", GENERIC_READ | GENERIC_WRITE,
+                                0, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (device == INVALID_HANDLE_VALUE) {
+        puts("[-] launch a game that uses xigncode3 first");
+        return 1;
+    }
+
+    DWORD pid = find_pid(L"your_target_game.exe");
+
+    HANDLE hProc = open_process(device, OPEN_HANDLE_CMD, pid, PROCESS_ALL_ACCESS);
+    if (hProc == INVALID_HANDLE_VALUE) { puts("[-] failed"); return 1; }
+
+    uint64_t base = get_module(device, ENUM_MOD_CMD, pid, L"your_target_game.exe");
+    printf("[+] base: %llx\n", base);
+
+    float val = 0;
+    read_mem(device, READ_CMD, hProc, base + YOUR_OFFSET, &amp;val, sizeof(val));
+    printf("[+] %.1f\n", val);
+
+    float patched = 99999.f;
+    write_mem(device, WRITE_CMD, pid, base + YOUR_OFFSET, &amp;patched, sizeof(patched));
+    puts("[+] done");
+
+    CloseHandle(hProc);
+    CloseHandle(device);
+}</pre>
+
+        <p>Fill in the <code>_CMD</code> constants with the command IDs you found while reversing. The offsets are on you — use Cheat Engine or IDA on the target game to find them.</p>
+
+        <h2>Why it works on other games</h2>
+        <p>The driver doesn't care what PID you pass in. No allowlist, no checks. <code>PsLookupProcessByProcessId</code> takes whatever you give it and the handle comes back from kernel mode with <code>ObOpenObjectByPointer</code>, which skips all OB callbacks system-wide. EAC and BattleEye both register callbacks to strip dangerous access rights from handles opened on their game processes. Those callbacks don't fire when the call comes from kernel mode. You get whatever you asked for.</p>
+
+        <p>So if Game A uses XIGNCODE3 and you have it loaded, its driver will happily open <code>PROCESS_ALL_ACCESS</code> into Game B sitting next to it. The anti-cheat becomes the cheat.</p>
+
+        <blockquote>"The anti-cheat protecting Game A becomes a tool for cheating in Game B."</blockquote>
+
+        <h2>Quick reference</h2>
+        <p>Instead of exact command IDs — find them yourself by looking for these API patterns in the dispatch table handlers:</p>
+
+        <ul>
+          <li><code>PsLookupProcessByProcessId</code> + <code>ObOpenObjectByPointer</code> → open any process handle</li>
+          <li><code>PsLookupProcessThreadByCid</code> + <code>ObOpenObjectByPointer</code> → open by PID + TID</li>
+          <li><code>ObReferenceObjectByHandle</code> + <code>MmProbeAndLockPages</code> → read process memory</li>
+          <li><code>KeStackAttachProcess</code> + <code>MmProbeAndLockPages</code> → write process memory</li>
+          <li><code>KeStackAttachProcess</code>, no MDL → enumerate modules (PEB walk)</li>
+          <li><code>ZwQueryInformationProcess</code> with class from packet → generic process info</li>
+          <li><code>ZwQueryInformationProcess(class=27)</code> → dump handle table</li>
+        </ul>
+
+        <div class="divider">/ / /</div>
+
+        <p style="font-size:.88rem;color:var(--faint);font-family:var(--mono)">Reversed during 2020–2021. Driver version 10.0.10011.16384, compiled 2018-03-29.</p>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  });
+</script>
+
+</body>
+</html>
