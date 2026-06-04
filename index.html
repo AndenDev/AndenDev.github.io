@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anden — Reverse Engineer &amp; .NET Developer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0b0e;
+    --bg-soft:#101319;
+    --surface:#161a22;
+    --surface-2:#1c212b;
+    --line:#232834;
+    --text:#d8dee8;
+    --muted:#79818f;
+    --faint:#474e5b;
+    --accent:#5af28a;
+    --accent-dim:#2f9a55;
+    --warn:#ffb454;
+    --mono:"JetBrains Mono",monospace;
+    --disp:"Chakra Petch",sans-serif;
+    --body:"IBM Plex Sans",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(900px 600px at 85% -10%, rgba(90,242,138,.06), transparent 60%),radial-gradient(700px 500px at -10% 110%, rgba(255,180,84,.04), transparent 60%)}
+  body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .progress{position:fixed;top:0;left:0;height:2px;width:0;background:var(--accent);z-index:60;box-shadow:0 0 8px var(--accent)}
+  .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 28px}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);background:rgba(10,11,14,.72);border-bottom:1px solid var(--line)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;max-width:1100px;margin:0 auto}
+  .logo{font-family:var(--mono);font-weight:700;font-size:1rem}
+  .logo .br{color:var(--accent)}
+  .logo .cur{color:var(--accent);animation:blink 1.1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .nav-links{display:flex;gap:26px;font-family:var(--mono);font-size:.74rem;letter-spacing:.06em}
+  .nav-links a{color:var(--muted);text-decoration:none;transition:color .25s}
+  .nav-links a::before{content:"// ";color:var(--faint)}
+  .nav-links a:hover{color:var(--accent)}
+  @media(max-width:680px){.nav-links{display:none}}
+
+  /* hero */
+  header{padding:90px 0 70px}
+  .term-card{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--bg-soft),var(--bg));overflow:hidden;box-shadow:0 30px 80px -40px rgba(0,0,0,.8)}
+  .term-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .term-bar i:nth-child(1){background:#ff5f56}.term-bar i:nth-child(2){background:#ffbd2e}.term-bar i:nth-child(3){background:#27c93f}
+  .term-bar .path{margin-left:12px;font-family:var(--mono);font-size:.72rem;color:var(--faint)}
+  .term-body{padding:44px 40px 50px}
+  @media(max-width:560px){.term-body{padding:32px 22px}}
+  .prompt{font-family:var(--mono);font-size:.8rem;color:var(--accent-dim);margin-bottom:24px}
+  .prompt b{color:var(--accent);font-weight:500}
+  .hero-title{font-family:var(--disp);font-weight:700;font-size:clamp(2.3rem,7vw,4.4rem);line-height:1.04;letter-spacing:-.01em}
+  .hero-title em{font-style:normal;color:var(--accent)}
+  .hero-sub{max-width:560px;margin-top:24px;font-size:1.1rem;color:var(--muted);line-height:1.7}
+  .hero-sub code{font-family:var(--mono);color:var(--text);background:var(--surface);padding:2px 7px;border-radius:4px;font-size:.86em}
+  .meta-row{display:flex;gap:34px;margin-top:38px;flex-wrap:wrap;font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;color:var(--faint)}
+  .meta-row b{display:block;color:var(--accent);font-weight:500;margin-top:7px;font-size:.8rem}
+
+  .fade{opacity:0;transform:translateY(22px);animation:rise .85s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .d1{animation-delay:.05s}.d2{animation-delay:.16s}.d3{animation-delay:.28s}.d4{animation-delay:.4s}
+
+  /* section heads */
+  section{padding:60px 0}
+  .sec-head{display:flex;align-items:baseline;gap:16px;margin:0 0 42px;padding-top:34px;border-top:1px solid var(--line)}
+  .sec-num{font-family:var(--mono);font-size:.74rem;color:var(--accent)}
+  .sec-title{font-family:var(--disp);font-weight:600;font-size:1.75rem;letter-spacing:-.01em}
+  .sec-title b{color:var(--faint);font-family:var(--mono);font-size:.95rem;font-weight:400;margin-right:5px}
+
+  /* projects */
+  .work{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  @media(max-width:720px){.work{grid-template-columns:1fr}}
+  .card{background:var(--bg-soft);padding:34px 32px;transition:background .3s;position:relative;overflow:hidden}
+  .card:hover{background:var(--surface)}
+  .card .addr{font-family:var(--mono);font-size:.66rem;color:var(--faint);position:absolute;top:18px;right:22px}
+  .card-tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+  .card-tag.amber{color:var(--warn)}
+  .card-title{font-family:var(--disp);font-weight:600;font-size:1.45rem;line-height:1.12;margin-bottom:12px}
+  .card-desc{color:var(--muted);font-size:.98rem;max-width:94%}
+  .stack-line{margin-top:24px;display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--bg)}
+
+  /* about + stack */
+  .about-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:56px}
+  @media(max-width:720px){.about-grid{grid-template-columns:1fr;gap:34px}}
+  .about-body p{font-size:1.16rem;line-height:1.8;color:var(--text);margin-bottom:22px;font-weight:300}
+  .about-body p:last-child{color:var(--muted)}
+  .about-body code{font-family:var(--mono);color:var(--accent);background:var(--surface);padding:2px 7px;border-radius:4px;font-size:.84em}
+  .stack h4{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 16px}
+  .stack h4:not(:first-child){margin-top:30px}
+  .stack ul{list-style:none}
+  .stack li{padding:10px 0;border-bottom:1px solid var(--line);font-size:.98rem;display:flex;justify-content:space-between;align-items:center}
+  .stack li span{color:var(--accent);font-family:var(--mono);font-size:.72rem}
+
+  /* journal previews */
+  .posts{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .post-row{background:var(--bg-soft);padding:26px 30px;display:flex;justify-content:space-between;align-items:center;gap:24px;text-decoration:none;transition:background .3s}
+  .post-row:hover{background:var(--surface)}
+  .post-row .pdate{font-family:var(--mono);font-size:.68rem;color:var(--accent);letter-spacing:.06em;margin-bottom:8px}
+  .post-row h3{font-family:var(--disp);font-weight:500;font-size:1.25rem;color:var(--text)}
+  .post-row p{color:var(--muted);font-size:.92rem;margin-top:6px;max-width:560px}
+  .post-row .arrow{color:var(--faint);font-size:1.3rem;transition:color .3s,transform .3s;flex-shrink:0}
+  .post-row:hover .arrow{color:var(--accent);transform:translateX(4px)}
+
+  /* featured full article */
+  .article{max-width:720px;margin:0 auto;padding-top:14px}
+  .post-meta{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:24px;display:flex;gap:14px;flex-wrap:wrap}
+  .post-meta .dot,.post-meta .read{color:var(--faint)}
+  .article h1{font-family:var(--disp);font-weight:700;font-size:clamp(2rem,5.5vw,3.1rem);line-height:1.08;letter-spacing:-.01em}
+  .article h1 em{font-style:normal;color:var(--accent)}
+  .dek{margin-top:22px;font-size:1.2rem;line-height:1.6;color:var(--muted)}
+  .byline{display:flex;align-items:center;gap:13px;margin-top:34px;padding:26px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .avatar{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;color:var(--bg);font-size:.9rem}
+  .byline .who{font-family:var(--disp);font-weight:500;font-size:.98rem}
+  .byline .role{font-size:.86rem;color:var(--faint)}
+  .abody{padding:42px 0 10px}
+  .abody p{font-size:1.14rem;line-height:1.85;margin-bottom:26px;color:#cdd4de;font-weight:300}
+  .abody p:first-of-type::first-letter{font-family:var(--disp);font-weight:700;float:left;font-size:3.8rem;line-height:.78;padding:6px 12px 0 0;color:var(--accent)}
+  .abody h2{font-family:var(--disp);font-weight:600;font-size:1.6rem;margin:48px 0 18px;line-height:1.15}
+  .abody h2::before{content:"# ";color:var(--faint);font-family:var(--mono)}
+  .abody a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-dim)}
+  .abody ul{margin:0 0 26px 20px}
+  .abody li{font-size:1.1rem;line-height:1.8;margin-bottom:10px;color:#cdd4de}
+  .abody li::marker{color:var(--accent)}
+  .abody code{font-family:var(--mono);font-size:.86em;background:var(--surface);padding:2px 7px;border-radius:4px;color:var(--accent)}
+  blockquote{margin:38px 0;padding:6px 0 6px 26px;border-left:2px solid var(--accent);font-family:var(--disp);font-style:italic;font-size:1.4rem;line-height:1.5;color:var(--text)}
+  pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:20px 22px;overflow-x:auto;margin:32px 0;font-family:var(--mono);font-size:.84rem;line-height:1.75;color:#cdd4be}
+  pre .c{color:var(--faint)}.pre .s{color:var(--warn)}
+  pre .k{color:var(--accent)}.pre .t{color:#69b7ff}
+  .note{display:flex;gap:14px;background:rgba(255,180,84,.06);border:1px solid rgba(255,180,84,.25);border-radius:8px;padding:18px 20px;margin:34px 0;font-size:.96rem;color:#e6dcc9}
+  .note b{color:var(--warn);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .divider{text-align:center;margin:54px 0;color:var(--faint);font-family:var(--mono);letter-spacing:.5em}
+
+  /* contact */
+  .contact{text-align:center;padding:90px 0 70px}
+  .contact .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:22px}
+  .contact h2{font-family:var(--disp);font-weight:700;font-size:clamp(2rem,6vw,3.6rem);line-height:1.05}
+  .contact a.mail{display:inline-block;margin-top:26px;font-family:var(--mono);font-size:1.2rem;color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-dim);padding-bottom:4px;transition:opacity .25s}
+  .contact a.mail:hover{opacity:.7}
+  .socials{display:flex;gap:24px;justify-content:center;margin-top:40px;font-family:var(--mono);font-size:.74rem;letter-spacing:.06em}
+  .socials a{color:var(--muted);text-decoration:none;transition:color .25s}
+  .socials a::before{content:"[ ";color:var(--faint)}.socials a::after{content:" ]";color:var(--faint)}
+  .socials a:hover{color:var(--accent)}
+
+  footer{border-top:1px solid var(--line);padding:28px 0;text-align:center;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;color:var(--faint);position:relative;z-index:1}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></div>
+    <div class="nav-links">
+      <a href="#work">work</a>
+      <a href="#about">about</a>
+      <a href="#journal">journal</a>
+      <a href="#contact">contact</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<header>
+  <div class="wrap">
+    <div class="term-card fade d1">
+      <div class="term-bar">
+        <i></i><i></i><i></i>
+        <span class="path">~/anden — bash — 80×24</span>
+      </div>
+      <div class="term-body">
+        <div class="prompt">$ <b>whoami</b> --role</div>
+        <h1 class="hero-title">Reverse engineer.<br><em>.NET</em> developer.</h1>
+        <p class="hero-sub">I reverse games and anti-cheats in my free time — mostly usermode, mostly just to understand how things work. At work I build web APIs in <code>C#</code> and <code>.NET</code>.</p>
+        <div class="meta-row">
+          <div>STATUS<b>ABE Data Solutions</b></div>
+          <div>LOCATION<b>Batangas, PH</b></div>
+          <div>FOCUS<b>RE · .NET · Kernel</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<!-- ===================== WORK ===================== -->
+<section id="work">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2 class="sec-title"><b>fn</b>selected_work</h2>
+    </div>
+    <div class="work" style="grid-template-columns:1fr">
+      <article class="card">
+        <span class="addr">0x0040</span>
+        <div class="card-tag amber">Reverse Engineering · Research</div>
+        <h3 class="card-title">Abusing xhunter1.sys</h3>
+        <p class="card-desc">Reversed XIGNCODE3's kernel driver during the pandemic and found commands to open handles, read and write memory on any process — then used it against games protected by EAC and BattleEye without getting banned.</p>
+        <div class="stack-line">
+          <span class="chip">IDA Pro</span>
+          <span class="chip">Windows Kernel</span>
+          <span class="chip">C++</span>
+          <span class="chip">BYOVD</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ABOUT ===================== -->
+<section id="about">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2 class="sec-title"><b>fn</b>about</h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-body">
+        <p>I'm John Aldrin M. Castillo, most people just call me Anden. I'm from Batangas, Philippines.</p>
+        <p>I started coding in high school. No course, no plan — I just saw how a program worked and got curious. Learned by doing, picked things up from people I met along the way, and honestly that's still how I learn things today.</p>
+        <p>Reverse engineering came through games. Started messing around in Cheat Engine, moved into disassemblers, and it just kept going. Mostly usermode — games, anti-cheats, understanding how protection actually works rather than just working around it.</p>
+        <p>After I graduated I started getting into web development. Found out .NET could handle that too so I stuck with it — picked up ASP.NET Core, REST APIs, databases, the whole stack. That turned into my day job.</p>
+      </div>
+      <div class="stack">
+        <h4>// reverse engineering</h4>
+        <ul>
+          <li>x64dbg / OllyDbg <span>DBG</span></li>
+          <li>IDA Pro / Ghidra <span>DISASM</span></li>
+          <li>Cheat Engine <span>SCAN</span></li>
+          <li>Windows Internals <span>OS</span></li>
+        </ul>
+        <h4>// .net &amp; dev</h4>
+        <ul>
+          <li>C# <span>LANG</span></li>
+          <li>ASP.NET Core <span>API</span></li>
+          <li>EF Core / SQL <span>DATA</span></li>
+          <li>P/Invoke &amp; interop <span>NATIVE</span></li>
+          <li>WPF / overlays <span>UI</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== JOURNAL ===================== -->
+<section id="journal">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2 class="sec-title"><b>fn</b>journal</h2>
+    </div>
+
+    <!-- recent posts list -->
+    <div class="posts" style="margin-bottom:64px">
+      <a class="post-row" href="#featured">
+        <div>
+          <div class="pdate">2025.06.04 · featured</div>
+          <h3>Abusing xhunter1.sys — How I Used XIGNCODE3's Own Driver Against Other Games</h3>
+          <p>XIGNCODE3 loads a kernel driver with commands to open handles and read/write any process. Here's how I found it and used it against EAC and BattleEye protected games without getting banned.</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+
+    <!-- featured full article -->
+    <article class="article" id="featured">
+      <div class="post-meta">
+        <span>Reverse Engineering</span><span class="dot">·</span>
+        <span>June 4, 2025</span><span class="dot">·</span>
+        <span class="read">12 min read</span>
+      </div>
+      <h1>Abusing xhunter1.sys —<br>How I Used <em>XIGNCODE3</em>'s Own Driver Against Other Games</h1>
+      <p class="dek">XIGNCODE3 installs a kernel driver that exposes commands to open handles, read memory, and write memory on any process — with no filtering on which process you target. Here's how I found it during the pandemic and used it against games protected by EAC and BattleEye.</p>
+      <div class="byline">
+        <div class="avatar">AN</div>
+        <div>
+          <div class="who">Anden</div>
+          <div class="role">Reverse Engineer</div>
+        </div>
+      </div>
+
+      <div class="abody">
+        <p>Back during the pandemic I was playing Special Force, a Korean FPS that uses XIGNCODE3 as its anti-cheat. At some point I got curious and started poking around the driver it installs — <code>xhunter1.sys</code>. I found a bunch of interesting kernel commands in there and the first thing that crossed my mind was: what if I use these against other games?</p>
+
+        <p>So I tried it. Pointed the driver's commands at games protected by EAC, BattleEye, and others. It worked. No ban.</p>
+
+        <p>I kept it to myself for a while because it was genuinely useful and I didn't want it patched. But this stuff is old now, other people have started talking about similar techniques, and the specific driver version I reversed is already out of date. So here's how it worked and how I found it.</p>
+
+        <p>The exact command IDs and offsets I'm not going to give you — the current version of xhunter1.sys might be different, and honestly finding them yourself is part of it. I'll show you what to look for and what the commands do. The rest is on you.</p>
+
+        <div class="note">
+          <div>
+            <b>Note · Version</b>
+            This was reversed during 2020–2021 on driver version 10.0.10011.16384 compiled 2018-03-29. The current version of XIGNCODE3 may have changed the packet format or command IDs. Reverse it yourself on whatever version you have.
+          </div>
+        </div>
+
+        <h2>Getting the driver loaded</h2>
+        <p>Install any game that ships with XIGNCODE3 and launch it. Black Desert Online, Blade &amp; Soul, ArcheAge, Special Force — plenty of options. The driver loads automatically at game start.</p>
+
+        <p>Once it's running you can check:</p>
+
+<pre>sc query xhunter1</pre>
+
+        <p>If the game is open, that'll show it as running. The binary itself lives at <code>C:\Windows\System32\drivers\xhunter1.sys</code> after the game installs. The device is at <code>\\.\xhunter1</code>. You can test if it's up just by trying to open it:</p>
+
+<pre>HANDLE h = CreateFileW(L"\\\\.\\xhunter1", GENERIC_READ | GENERIC_WRITE,
+                        0, nullptr, OPEN_EXISTING, 0, nullptr);</pre>
+
+        <p>If that doesn't return <code>INVALID_HANDLE_VALUE</code>, the driver is running and you're in.</p>
+
+        <h2>Figuring out the packet format</h2>
+        <p>Load <code>xhunter1.sys</code> in IDA or Ghidra. Find <code>DriverEntry</code> and look for what gets assigned to <code>MajorFunction</code> in the <code>DRIVER_OBJECT</code> — that gives you the IRP handlers. The one you care about is <code>IRP_MJ_WRITE</code>, which is how all communication happens.</p>
+
+        <p>Inside the write handler, right near the top, you'll see two comparisons:</p>
+
+<pre>cmp dword ptr [buffer], 0x270
+cmp dword ptr [buffer+4], 0x345821AB</pre>
+
+        <p>Those are the validation checks. Every packet needs <code>size = 0x270</code> and <code>magic = 0x345821AB</code> or the driver rejects it immediately.</p>
+
+        <p>Keep going. A few instructions later it reads a QWORD from <code>[buffer+0x10]</code> and uses it as a write destination — that's a pointer to your response buffer. The driver writes the response directly to whatever address you put there. At <code>[buffer+0x0C]</code> is the command ID, which gets looked up in a dispatch table. So the full request structure is:</p>
+
+<pre>#pragma pack(push, 1)
+struct XHZ_REQUEST {
+    uint32_t size;        // 0x270
+    uint32_t magic;       // 0x345821AB
+    uint32_t req_id;      // random, echoed back as ~req_id
+    uint32_t cmd_id;      // command
+    uint64_t res_ptr;     // your response buffer pointer
+    uint8_t  body[0x258]; // parameters
+};
+#pragma pack(pop)</pre>
+
+        <p>For the response, search the binary for <code>0x12121212</code>. You'll find it being stored into a buffer — that's the response magic. The full response is <code>0x2FA</code> bytes. Same header layout as the request but with magic <code>0x12121212</code> and <code>req_id</code> bitwise-flipped to <code>~original_req_id</code>.</p>
+
+<pre>#pragma pack(push, 1)
+struct XHZ_RESPONSE {
+    uint32_t size;
+    uint32_t magic;          // 0x12121212
+    uint32_t req_id;         // ~your_req_id
+    uint8_t  result[0x2EE];
+};
+#pragma pack(pop)</pre>
+
+        <h2>Finding the commands</h2>
+        <p>Go through the dispatch table handlers one by one. Each handler calls specific kernel APIs, and those tell you exactly what it does. Since everything is imported from <code>ntoskrnl.exe</code>, just look at the import calls inside each function.</p>
+
+        <p><b>Open handle</b> — the handler that calls both <code>PsLookupProcessByProcessId</code> and <code>ObOpenObjectByPointer</code>. Body is a PID and an access mask.</p>
+
+        <p><b>Read memory</b> — calls <code>ObReferenceObjectByHandle</code>, then <code>MmProbeAndLockPages</code>, then <code>MmMapLockedPagesSpecifyCache</code>. Body is a process handle, a virtual address, and a byte count.</p>
+
+        <p><b>Write memory</b> — calls <code>KeStackAttachProcess</code> and <code>MmProbeAndLockPages</code>. Body is a PID, virtual address, size, and the data to write.</p>
+
+        <p><b>Module enumeration</b> — calls <code>KeStackAttachProcess</code> but no MDL functions. Walks the PEB loader list. Body is a PID.</p>
+
+        <p>Note down the command ID from the dispatch table entry that points to each handler. That number goes in <code>cmd_id</code>.</p>
+
+        <h2>Sending packets</h2>
+
+<pre>XHZ_RESPONSE* send(HANDLE device, uint32_t cmd,
+                   const void* body, size_t body_len) {
+    auto req = new XHZ_REQUEST{};
+    auto res = new XHZ_RESPONSE{};
+
+    req-&gt;size    = 0x270;
+    req-&gt;magic   = 0x345821AB;
+    req-&gt;req_id  = rand();
+    req-&gt;cmd_id  = cmd;
+    req-&gt;res_ptr = (uint64_t)res;
+
+    if (body &amp;&amp; body_len)
+        memcpy(req-&gt;body, body, body_len);
+
+    DWORD written = 0;
+    if (!WriteFile(device, req, sizeof(XHZ_REQUEST), &amp;written, nullptr)
+        || written != sizeof(XHZ_RESPONSE)
+        || res-&gt;magic != 0x12121212
+        || ~res-&gt;req_id != req-&gt;req_id) {
+        delete req;
+        delete res;
+        return nullptr;
+    }
+
+    delete req;
+    return res;
+}</pre>
+
+        <h2>Opening a handle to any process</h2>
+        <p>The open-handle command uses <code>ObOpenObjectByPointer</code> from kernel mode. That bypasses the Object Manager's access checks and it skips every OB callback on the system — meaning other anti-cheats that registered handle-stripping callbacks won't fire. You get exactly the access mask you asked for, for any process.</p>
+
+<pre>#pragma pack(push, 1)
+struct OpenHandleReq { uint32_t pid, access; };
+struct OpenHandleRes { uint32_t status; HANDLE handle; };
+#pragma pack(pop)
+
+HANDLE open_process(HANDLE device, uint32_t cmd, DWORD pid, DWORD access) {
+    OpenHandleReq req{ pid, access };
+    auto res = send(device, cmd, &amp;req, sizeof(req));
+    if (!res) return INVALID_HANDLE_VALUE;
+
+    auto out = (OpenHandleRes*)res-&gt;result;
+    HANDLE h = out-&gt;status == 0 ? out-&gt;handle : INVALID_HANDLE_VALUE;
+    delete res;
+    return h;
+}</pre>
+
+<pre>HANDLE hTarget = open_process(device, OPEN_HANDLE_CMD, target_pid, PROCESS_ALL_ACCESS);</pre>
+
+        <p>The returned handle works with any Win32 API that takes a process handle — <code>ReadProcessMemory</code>, <code>WriteProcessMemory</code>, <code>CreateRemoteThread</code>, all of it. Or use the driver's own read/write commands if you want to stay in kernel land.</p>
+
+        <h2>Reading memory</h2>
+        <p>The read command maps pages via MDL, so protection flags don't matter. <code>PAGE_GUARD</code>, <code>PAGE_NOACCESS</code> — irrelevant. If the page exists in physical memory, you read it.</p>
+
+<pre>#pragma pack(push, 1)
+struct ReadReq {
+    HANDLE   hProcess;
+    uint32_t _pad;
+    uint64_t address;
+    uint32_t size;
+};
+struct ReadRes {
+    uint32_t status, bytes_read;
+    uint8_t  data[1];
+};
+#pragma pack(pop)
+
+bool read_mem(HANDLE device, uint32_t cmd, HANDLE hProcess,
+              uint64_t addr, void* out, uint32_t size) {
+    ReadReq req{ hProcess, 0, addr, size };
+    auto res = send(device, cmd, &amp;req, sizeof(req));
+    if (!res) return false;
+
+    auto r = (ReadRes*)res-&gt;result;
+    if (r-&gt;status == 0)
+        memcpy(out, r-&gt;data, min(r-&gt;bytes_read, size));
+
+    bool ok = r-&gt;status == 0;
+    delete res;
+    return ok;
+}</pre>
+
+<pre>float hp = 0.f;
+read_mem(device, READ_CMD, hTarget, health_addr, &amp;hp, sizeof(hp));</pre>
+
+        <h2>Writing memory</h2>
+        <p>Write goes through the same MDL path. Page protection doesn't stop it, and it writes at the physical level so <code>.text</code> sections marked read-only are fair game too.</p>
+
+<pre>#pragma pack(push, 1)
+struct WriteReq {
+    uint32_t pid, _pad;
+    uint64_t address;
+    uint32_t size;
+    uint8_t  data[1];
+};
+#pragma pack(pop)
+
+bool write_mem(HANDLE device, uint32_t cmd, DWORD pid,
+               uint64_t addr, const void* buf, uint32_t size) {
+    auto total = offsetof(WriteReq, data) + size;
+    auto req   = (WriteReq*)_alloca(total);
+    memset(req, 0, total);
+    req-&gt;pid     = pid;
+    req-&gt;address = addr;
+    req-&gt;size    = size;
+    memcpy(req-&gt;data, buf, size);
+
+    auto res = send(device, cmd, req, total);
+    if (!res) return false;
+
+    bool ok = *(uint32_t*)res-&gt;result == 0;
+    delete res;
+    return ok;
+}</pre>
+
+<pre>float godmode = 99999.f;
+write_mem(device, WRITE_CMD, target_pid, health_addr, &amp;godmode, sizeof(godmode));</pre>
+
+        <h2>Getting module bases</h2>
+        <p>The module enum command attaches to the process and walks its <code>PEB.Ldr</code> — the same linked list Windows uses to track loaded DLLs. Gives you name, base, and size for everything loaded.</p>
+
+<pre>#pragma pack(push, 1)
+struct EnumModReq { uint32_t pid, max; };
+struct ModEntry {
+    uint64_t base;
+    uint32_t size, _pad;
+    wchar_t  name[260];
+};
+struct EnumModRes {
+    uint32_t status, count;
+    ModEntry entries[1];
+};
+#pragma pack(pop)
+
+uint64_t get_module(HANDLE device, uint32_t cmd,
+                    DWORD pid, const wchar_t* name) {
+    EnumModReq req{ pid, 128 };
+    auto res = send(device, cmd, &amp;req, sizeof(req));
+    if (!res) return 0;
+
+    auto r = (EnumModRes*)res-&gt;result;
+    uint64_t base = 0;
+    for (uint32_t i = 0; i &lt; r-&gt;count &amp;&amp; !base; i++)
+        if (_wcsicmp(r-&gt;entries[i].name, name) == 0)
+            base = r-&gt;entries[i].base;
+
+    delete res;
+    return base;
+}</pre>
+
+<pre>auto base  = get_module(device, ENUM_MOD_CMD, pid, L"game.exe");
+auto unity = get_module(device, ENUM_MOD_CMD, pid, L"UnityPlayer.dll");</pre>
+
+        <h2>Full example</h2>
+
+<pre>int main() {
+    srand((unsigned)time(nullptr));
+
+    // need a xigncode game running first
+    HANDLE device = CreateFileW(L"\\\\.\\xhunter1", GENERIC_READ | GENERIC_WRITE,
+                                0, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (device == INVALID_HANDLE_VALUE) {
+        puts("[-] launch a game that uses xigncode3 first");
+        return 1;
+    }
+
+    DWORD pid = find_pid(L"your_target_game.exe");
+
+    // open full access handle — bypasses eac/be handle stripping
+    HANDLE hProc = open_process(device, OPEN_HANDLE_CMD, pid, PROCESS_ALL_ACCESS);
+    if (hProc == INVALID_HANDLE_VALUE) { puts("[-] failed"); return 1; }
+
+    // get the base address from kernel PEB walk
+    uint64_t base = get_module(device, ENUM_MOD_CMD, pid, L"your_target_game.exe");
+    printf("[+] base: %llx\n", base);
+
+    // read something
+    float val = 0;
+    read_mem(device, READ_CMD, hProc, base + YOUR_OFFSET, &amp;val, sizeof(val));
+    printf("[+] %.1f\n", val);
+
+    // write something
+    float patched = 99999.f;
+    write_mem(device, WRITE_CMD, pid, base + YOUR_OFFSET, &amp;patched, sizeof(patched));
+    puts("[+] done");
+
+    CloseHandle(hProc);
+    CloseHandle(device);
+}</pre>
+
+        <p>Fill in the <code>_CMD</code> constants with the command IDs you found while reversing. The offsets are on you — use Cheat Engine or IDA on the target game to find them.</p>
+
+        <h2>Why it works on other games</h2>
+        <p>The driver doesn't care what PID you pass in. No allowlist, no checks. <code>PsLookupProcessByProcessId</code> takes whatever you give it and the handle comes back from kernel mode with <code>ObOpenObjectByPointer</code>, which skips all OB callbacks system-wide. EAC and BattleEye both register callbacks to strip dangerous access rights from handles opened on their game processes. Those callbacks don't fire when the call comes from kernel mode. You get whatever you asked for.</p>
+
+        <p>So if Game A uses XIGNCODE3 and you have it loaded, its driver will happily open <code>PROCESS_ALL_ACCESS</code> into Game B sitting next to it. The anti-cheat becomes the cheat.</p>
+
+        <blockquote>"The anti-cheat protecting Game A becomes a tool for cheating in Game B."</blockquote>
+
+        <h2>Quick reference</h2>
+        <p>Instead of exact command IDs — find them yourself by looking for these API patterns in the dispatch table handlers:</p>
+
+        <ul>
+          <li><code>PsLookupProcessByProcessId</code> + <code>ObOpenObjectByPointer</code> → open any process handle</li>
+          <li><code>PsLookupProcessThreadByCid</code> + <code>ObOpenObjectByPointer</code> → open by PID + TID</li>
+          <li><code>ObReferenceObjectByHandle</code> + <code>MmProbeAndLockPages</code> → read process memory</li>
+          <li><code>KeStackAttachProcess</code> + <code>MmProbeAndLockPages</code> → write process memory</li>
+          <li><code>KeStackAttachProcess</code>, no MDL → enumerate modules (PEB walk)</li>
+          <li><code>ZwQueryInformationProcess</code> with class from packet → generic process info</li>
+          <li><code>ZwQueryInformationProcess(class=27)</code> → dump handle table</li>
+        </ul>
+
+        <div class="divider">/ / /</div>
+
+        <p style="font-size:.88rem;color:var(--faint);font-family:var(--mono)">Reversed during 2020–2021. Driver version 10.0.10011.16384, compiled 2018-03-29.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== CONTACT ===================== -->
+<section id="contact" class="contact">
+  <div class="wrap">
+    <div class="eyebrow">$ ./contact --me</div>
+    <h2>Got something<br>worth taking apart?</h2>
+    <a class="mail" href="mailto:andencastillo@gmail.com">andencastillo@gmail.com</a>
+    <div class="socials">
+      <a href="https://github.com/AndenDev" target="_blank">GitHub</a>
+      <a href="#">Discord: pasterdev_</a>
+    </div>
+  </div>
+</section>
+
+<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  });
+</script>
+
+</body>
+</html>
