@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — Anden</title>
+<meta name="description" content="Writing on reverse engineering, .NET development, and systems programming by Anden.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="../index.html">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></a>
+    <div class="nav-links">
+      <a href="../index.html#work">work</a>
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#blog">blog</a>
+      <a href="../index.html#contact">contact</a>
+    </div>
+  </div>
+</nav>
+
+<main style="position:relative;z-index:1;padding:60px 0 120px">
+  <div class="wrap">
+    <a class="back-link" href="../index.html">← back</a>
+
+    <div class="sec-head" style="margin-top:0">
+      <span class="sec-num">all</span>
+      <h2 class="sec-title"><b>fn</b>blog</h2>
+    </div>
+
+    <div class="posts">
+      <a class="post-row" href="xhunter1.html">
+        <div>
+          <div class="pdate">2025.06.04 · featured</div>
+          <h3>Abusing xhunter1.sys — How I Used XIGNCODE3's Own Driver Against Other Games</h3>
+          <p>XIGNCODE3 loads a kernel driver with commands to open handles and read/write any process. Here's how I found it and used it against EAC and BattleEye protected games without getting banned.</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+      <a class="post-row" href="gepard-shield.html">
+        <div>
+          <div class="pdate">2025.05.10 · reverse engineering</div>
+          <h3>Gepard Shield Analysis: KiUserExceptionDispatcher Hook Check</h3>
+          <p>How Gepard Shield hooks KiUserExceptionDispatcher to intercept debugger activity, and how its periodic byte check detects when the hook has been removed.</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </div>
+</main>
+
+<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  });
+</script>
+
+</body>
+</html>

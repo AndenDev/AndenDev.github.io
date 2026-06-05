@@ -19,7 +19,7 @@
     <div class="nav-links">
       <a href="#work">work</a>
       <a href="#about">about</a>
-      <a href="#journal">journal</a>
+      <a href="#blog">blog</a>
       <a href="#contact">contact</a>
     </div>
   </div>
@@ -38,9 +38,9 @@
         <h1 class="hero-title">Reverse engineer.<br><em>.NET</em> developer.</h1>
         <p class="hero-sub">I reverse games and anti-cheats in my free time — mostly usermode, mostly just to understand how things work. At work I build web APIs in <code>C#</code> and <code>.NET</code>.</p>
         <div class="meta-row">
-          <div>STATUS<b>ABE Data Solutions</b></div>
+          <div>CURRENTLY WORKING AT<b>ABE Data Solutions</b></div>
           <div>LOCATION<b>Batangas, PH</b></div>
-          <div>FOCUS<b>RE · .NET · Kernel</b></div>
+          <div>FOCUS<b>RE · .NET API</b></div>
         </div>
       </div>
     </div>
@@ -53,9 +53,9 @@
   <div class="wrap">
     <div class="sec-head">
       <span class="sec-num">01</span>
-      <h2 class="sec-title"><b>fn</b>selected_work</h2>
+      <h2 class="sec-title"><b>fn</b>projects</h2>
     </div>
-    <div class="work" style="grid-template-columns:1fr">
+    <div class="work">
       <a class="card" href="blog/xhunter1.html">
         <span class="addr">0x0040</span>
         <div class="card-tag amber">Reverse Engineering · Research</div>
@@ -68,6 +68,35 @@
           <span class="chip">BYOVD</span>
         </div>
       </a>
+      <a class="card" href="blog/licensing-platform.html">
+        <span class="addr">0x0080</span>
+        <div class="card-tag">Full-Stack · .NET</div>
+        <h3 class="card-title">Licensing &amp; Auth Platform</h3>
+        <p class="card-desc">Multi-tenant licensing system with HWID binding, JWT auth, a reseller tier, and a React admin dashboard — plus a Discord bot that syncs roles and handles license resets via slash commands.</p>
+        <div class="stack-line">
+          <span class="chip">ASP.NET Core 8</span>
+          <span class="chip">React + TypeScript</span>
+          <span class="chip">Discord.NET</span>
+          <span class="chip">EF Core / SQL</span>
+          <span class="chip">C++</span>
+        </div>
+      </a>
+      <a class="card" href="blog/machine-interface.html">
+        <span class="addr">0x00C0</span>
+        <div class="card-tag">Full-Stack · .NET · Healthcare</div>
+        <h3 class="card-title">Lab Analyzer Integration API</h3>
+        <p class="card-desc">ASP.NET Core 8 middleware that connects clinical laboratory analyzers to a LIS — parsing ASTM and HL7 protocols across machines from Roche, Sysmex, and VITEK 2, with legacy LIS database support.</p>
+        <div class="stack-line">
+          <span class="chip">ASP.NET Core 8</span>
+          <span class="chip">ASTM · HL7</span>
+          <span class="chip">Hangfire</span>
+          <span class="chip">EF Core / SQL</span>
+          <span class="chip">WinForms</span>
+        </div>
+      </a>
+    </div>
+    <div class="see-all-row">
+      <a class="see-all" href="projects.html">see all projects →</a>
     </div>
   </div>
 </section>
@@ -87,20 +116,32 @@
         <p>After I graduated I started getting into web development. Found out .NET could handle that too so I stuck with it — picked up ASP.NET Core, REST APIs, databases, the whole stack. That turned into my day job.</p>
       </div>
       <div class="stack">
+        <h4>// languages</h4>
+        <ul>
+          <li>C / C++ <span>NATIVE</span></li>
+          <li>C# <span>LANG</span></li>
+          <li>Assembly (x86/x64) <span>ASM</span></li>
+        </ul>
         <h4>// reverse engineering</h4>
         <ul>
-          <li>x64dbg / OllyDbg <span>DBG</span></li>
           <li>IDA Pro / Ghidra <span>DISASM</span></li>
+          <li>x64dbg / OllyDbg <span>DBG</span></li>
           <li>Cheat Engine <span>SCAN</span></li>
           <li>Windows Internals <span>OS</span></li>
         </ul>
-        <h4>// .net &amp; dev</h4>
+        <h4>// web &amp; dev</h4>
         <ul>
-          <li>C# <span>LANG</span></li>
           <li>ASP.NET Core <span>API</span></li>
+          <li>Bootstrap / jQuery <span>UI</span></li>
           <li>EF Core / SQL <span>DATA</span></li>
-          <li>P/Invoke &amp; interop <span>NATIVE</span></li>
-          <li>WPF / overlays <span>UI</span></li>
+          <li>P/Invoke &amp; interop <span>FFI</span></li>
+        </ul>
+        <h4>// scripting</h4>
+        <ul>
+          <li>JavaScript <span>FAMILIAR</span></li>
+          <li>Python <span>FAMILIAR</span></li>
+          <li>PHP <span>FAMILIAR</span></li>
+          <li>Node.js <span>FAMILIAR</span></li>
         </ul>
       </div>
     </div>
@@ -108,11 +149,11 @@
 </section>
 
 <!-- ===================== JOURNAL ===================== -->
-<section id="journal">
+<section id="blog">
   <div class="wrap">
     <div class="sec-head">
       <span class="sec-num">03</span>
-      <h2 class="sec-title"><b>fn</b>journal</h2>
+      <h2 class="sec-title"><b>fn</b>blog</h2>
     </div>
 
     <!-- recent posts list -->
@@ -125,6 +166,17 @@
         </div>
         <span class="arrow">→</span>
       </a>
+      <a class="post-row" href="blog/gepard-shield.html">
+        <div>
+          <div class="pdate">2025.05.10 · reverse engineering</div>
+          <h3>Gepard Shield Analysis: KiUserExceptionDispatcher Hook Check</h3>
+          <p>How Gepard Shield hooks KiUserExceptionDispatcher to intercept debugger activity, and how its periodic byte check detects when the hook has been removed.</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+    <div class="see-all-row">
+      <a class="see-all" href="blog/index.html">see all posts →</a>
     </div>
   </div>
 </section>

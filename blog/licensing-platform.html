@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Licensing &amp; Auth Platform — Anden</title>
+<meta name="description" content="A multi-tenant licensing and subscription management platform built with ASP.NET Core 8, React, and a Discord bot — featuring HWID binding, JWT auth, a reseller system, and a full admin dashboard.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Licensing &amp; Auth Platform — Anden">
+<meta property="og:description" content="A multi-tenant licensing and subscription management platform built with ASP.NET Core 8, React, and a Discord bot — featuring HWID binding, JWT auth, a reseller system, and a full admin dashboard.">
+<meta property="og:url" content="https://johnaldrin.dev/blog/licensing-platform.html">
+<meta property="og:site_name" content="Anden">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Licensing &amp; Auth Platform — Anden">
+<meta name="twitter:description" content="A multi-tenant licensing and subscription management platform built with ASP.NET Core 8, React, and a Discord bot.">
+<link rel="canonical" href="https://johnaldrin.dev/blog/licensing-platform.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="../index.html">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></a>
+    <div class="nav-links">
+      <a href="../index.html#work">work</a>
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#blog">blog</a>
+      <a href="../index.html#contact">contact</a>
+    </div>
+  </div>
+</nav>
+
+<main style="position:relative;z-index:1;padding:60px 0 120px">
+  <div class="wrap">
+    <a class="back-link" href="../index.html#work">← back</a>
+
+    <article class="article">
+      <div class="post-meta">
+        <span>Full-Stack · .NET</span><span class="dot">·</span>
+        <span>Private Project</span><span class="dot">·</span>
+        <span class="read">8 min read</span>
+      </div>
+      <h1>Licensing &amp; <em>Auth</em> Platform</h1>
+      <p class="dek">A full-stack licensing and subscription management system — REST API, React admin dashboard, Discord bot, and a C++ client SDK. Built to handle HWID-bound licenses, multi-tier resellers, and role sync across Discord guilds.</p>
+      <div class="byline">
+        <div class="avatar">AN</div>
+        <div>
+          <div class="who">Anden</div>
+          <div class="role">Full-Stack Developer</div>
+        </div>
+      </div>
+
+      <div class="abody">
+        <p>This started as a simple license checker and grew into a full platform. I needed a way to manage licenses, customers, and subscriptions for a private software project — and decided to build the whole thing properly rather than patch something together.</p>
+
+        <p>The end result is four components that work together: an ASP.NET Core API as the backbone, a React dashboard for administration, a Discord bot for user-facing interactions, and a C++ example app that shows how a client integrates with the auth system.</p>
+
+        <h2 id="overview">Overview</h2>
+        <p>The platform handles the full lifecycle of a software license — creation, activation, HWID binding, renewal, and revocation. On top of that it supports a reseller tier, meaning other people can sell licenses at their own prices with their own approval workflows. Everything is tracked through audit logs, and a Discord bot lets end users reset their HWID or request username changes without touching the dashboard.</p>
+
+        <div class="note">
+          <div>
+            <b>Note · Private</b>
+            This is a closed-source private project. No public repository or live demo — this page covers the architecture and what I built.
+          </div>
+        </div>
+
+        <div class="note">
+          <div>
+            <b>Status · Active</b>
+            This project is still actively in development — features, improvements, and fixes go in regularly. What's described here reflects the current state but the platform keeps evolving.
+          </div>
+        </div>
+
+        <h2 id="api">The API</h2>
+        <p>Built on <code>ASP.NET Core 8</code> with <code>Entity Framework Core 9</code> and SQL Server. The API handles everything — auth, license management, customer records, proxy assignment, reseller billing, and background maintenance tasks.</p>
+
+        <p>Authentication uses short-lived JWT access tokens (15 minutes) stored in <code>httpOnly</code> cookies alongside a 7-day refresh token. CSRF is handled with double-submit cookies — a pattern from the header must match the cookie on all state-changing requests. Rate limiting sits on the auth endpoints (10 req/min) and license endpoints to prevent brute-force.</p>
+
+        <p>The role system covers several levels:</p>
+        <ul>
+          <li>Admin — full access</li>
+          <li>Moderator — customer and license management</li>
+          <li>Sales Manager — approval workflows and direct sales</li>
+          <li>Reseller — self-service portal for their own customers</li>
+          <li>Discord Bot — scoped API key access for bot operations</li>
+        </ul>
+
+        <p>Background services run on a timer to clean up expired tokens, purge soft-deleted records past retention, poll FX rates for currency conversion in the reseller billing system, and deliver security event webhooks.</p>
+
+        <h2 id="webui">The Web UI</h2>
+        <p>The admin dashboard is a React 18 SPA written in TypeScript, built with Vite and styled with Tailwind CSS and Radix UI components. It's served as static files from the API's <code>wwwroot/</code>, so there's no separate hosting — one deployment covers both.</p>
+
+        <p>The dashboard covers every part of the system: license CRUD, user management, customer profiles, subscription types, reseller accounts, sales approval queues, Discord bot configuration per guild, and a full audit log viewer with filtering.</p>
+
+        <h2 id="discord-bot">The Discord Bot</h2>
+        <p>A <code>.NET 8</code> Worker Service running as a Windows Service, using <code>Discord.NET</code>. The bot communicates with the API via a scoped API key and supports multiple guild instances from a single process.</p>
+
+        <p>It exposes two slash commands to end users:</p>
+        <ul>
+          <li><code>/reset</code> — resets the HWID binding on a license, letting the user move to a new machine</li>
+          <li><code>/change-username</code> — submits a username change request that goes to a staff approval queue</li>
+        </ul>
+
+        <p>On the backend it also handles role sync — periodically checking subscription statuses and updating Discord roles to match, so a customer whose subscription lapses automatically loses their access role without any manual intervention.</p>
+
+        <h2 id="cpp-client">The C++ Client SDK</h2>
+        <p>A reference implementation in C++17 that shows how a desktop application integrates with the license system. It handles HWID fingerprinting, sends activation requests to the API, manages the session token, and can pull down asset updates (builds, config files) that the API serves per subscription tier.</p>
+
+        <p>The client uses WinHTTP for requests, BCrypt and CryptoAPI for the crypto side (RSA, AES-GCM, HMAC, SHA256), and optionally integrates VMProtect SDK for build obfuscation. String literals are encrypted at compile time with skCrypter to make static analysis harder.</p>
+
+        <h2 id="stack">Tech stack</h2>
+        <ul>
+          <li><code>ASP.NET Core 8</code> — API framework</li>
+          <li><code>Entity Framework Core 9</code> — ORM with SQL Server</li>
+          <li><code>React 18 + TypeScript</code> — admin dashboard</li>
+          <li><code>Vite + Tailwind CSS + Radix UI</code> — frontend build and components</li>
+          <li><code>Discord.NET 3.17</code> — bot framework</li>
+          <li><code>C++17</code> — client SDK</li>
+          <li><code>JWT Bearer + BCrypt</code> — authentication and password hashing</li>
+          <li><code>OpenTelemetry + Prometheus</code> — metrics and observability</li>
+          <li><code>GitHub Actions</code> — CI pipeline, publishes to IIS on push</li>
+        </ul>
+
+        <h2 id="lessons">What I learned</h2>
+        <p>This was the first project where I had to think seriously about the security model end to end — not just "does the API require a token" but things like what happens if a refresh token leaks, how to prevent timing attacks on license lookups, and how to make the audit trail tamper-evident. The double-submit CSRF pattern was new to me and took a few iterations to get right across the React frontend and the API middleware.</p>
+
+        <p>The reseller billing system was also more complex than expected. Supporting multiple currency tiers with live FX rates, approval workflows, and per-reseller pricing without letting the data model become a mess took several rounds of redesign. EF Core's owned types and table splitting helped keep the schema clean.</p>
+
+        <p>Building the C++ client alongside the API forced me to think about the protocol more carefully than I would have otherwise — every field in the request/response had to be intentional because changing it later meant updating both sides.</p>
+
+        <div class="divider">/ / /</div>
+
+        <p style="font-size:.88rem;color:var(--faint);font-family:var(--mono)">Private project — closed source, not publicly available.</p>
+      </div>
+
+      <div class="post-footer">
+        <a class="back-link" href="../index.html#work">← back to projects</a>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  });
+
+  document.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'copy';
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(pre.textContent.trim()).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+</script>
+
+</body>
+</html>

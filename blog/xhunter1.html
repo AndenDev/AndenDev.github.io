@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Abusing xhunter1.sys — Anden</title>
+<meta name="description" content="XIGNCODE3 installs a kernel driver that exposes commands to open handles, read memory, and write memory on any process with no filtering. Here's how I found it during the pandemic and used it against EAC and BattleEye.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Abusing xhunter1.sys — How I Used XIGNCODE3's Own Driver Against Other Games">
+<meta property="og:description" content="XIGNCODE3 installs a kernel driver that exposes commands to open handles, read memory, and write memory on any process with no filtering. Here's how I found it during the pandemic and used it against EAC and BattleEye.">
+<meta property="og:url" content="https://johnaldrin.dev/blog/xhunter1.html">
+<meta property="og:site_name" content="Anden">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Abusing xhunter1.sys — How I Used XIGNCODE3's Own Driver Against Other Games">
+<meta name="twitter:description" content="XIGNCODE3 installs a kernel driver that exposes commands to open handles, read memory, and write memory on any process with no filtering. Here's how I found it and used it against EAC and BattleEye.">
+<link rel="canonical" href="https://johnaldrin.dev/blog/xhunter1.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -19,7 +29,7 @@
     <div class="nav-links">
       <a href="../index.html#work">work</a>
       <a href="../index.html#about">about</a>
-      <a href="../index.html#journal">journal</a>
+      <a href="../index.html#blog">blog</a>
       <a href="../index.html#contact">contact</a>
     </div>
   </div>
@@ -61,7 +71,7 @@
           </div>
         </div>
 
-        <h2>Getting the driver loaded</h2>
+        <h2 id="loading">Getting the driver loaded</h2>
         <p>Install any game that ships with XIGNCODE3 and launch it. Black Desert Online, Blade &amp; Soul, ArcheAge, Special Force — plenty of options. The driver loads automatically at game start.</p>
 
         <p>Once it's running you can check:</p>
@@ -75,7 +85,7 @@
 
         <p>If that doesn't return <code>INVALID_HANDLE_VALUE</code>, the driver is running and you're in.</p>
 
-        <h2>Figuring out the packet format</h2>
+        <h2 id="packet-format">Figuring out the packet format</h2>
         <p>Load <code>xhunter1.sys</code> in IDA or Ghidra. Find <code>DriverEntry</code> and look for what gets assigned to <code>MajorFunction</code> in the <code>DRIVER_OBJECT</code> — that gives you the IRP handlers. The one you care about is <code>IRP_MJ_WRITE</code>, which is how all communication happens.</p>
 
         <p>Inside the write handler, right near the top, you'll see two comparisons:</p>
@@ -109,7 +119,7 @@ struct XHZ_RESPONSE {
 };
 #pragma pack(pop)</pre>
 
-        <h2>Finding the commands</h2>
+        <h2 id="commands">Finding the commands</h2>
         <p>Go through the dispatch table handlers one by one. Each handler calls specific kernel APIs, and those tell you exactly what it does. Since everything is imported from <code>ntoskrnl.exe</code>, just look at the import calls inside each function.</p>
 
         <p><b>Open handle</b> — the handler that calls both <code>PsLookupProcessByProcessId</code> and <code>ObOpenObjectByPointer</code>. Body is a PID and an access mask.</p>
@@ -122,7 +132,7 @@ struct XHZ_RESPONSE {
 
         <p>Note down the command ID from the dispatch table entry that points to each handler. That number goes in <code>cmd_id</code>.</p>
 
-        <h2>Sending packets</h2>
+        <h2 id="sending">Sending packets</h2>
 
 <pre>XHZ_RESPONSE* send(HANDLE device, uint32_t cmd,
                    const void* body, size_t body_len) {
@@ -152,7 +162,7 @@ struct XHZ_RESPONSE {
     return res;
 }</pre>
 
-        <h2>Opening a handle to any process</h2>
+        <h2 id="open-handle">Opening a handle to any process</h2>
         <p>The open-handle command uses <code>ObOpenObjectByPointer</code> from kernel mode. That bypasses the Object Manager's access checks and it skips every OB callback on the system — meaning other anti-cheats that registered handle-stripping callbacks won't fire. You get exactly the access mask you asked for, for any process.</p>
 
 <pre>#pragma pack(push, 1)
@@ -175,7 +185,7 @@ HANDLE open_process(HANDLE device, uint32_t cmd, DWORD pid, DWORD access) {
 
         <p>The returned handle works with any Win32 API that takes a process handle — <code>ReadProcessMemory</code>, <code>WriteProcessMemory</code>, <code>CreateRemoteThread</code>, all of it. Or use the driver's own read/write commands if you want to stay in kernel land.</p>
 
-        <h2>Reading memory</h2>
+        <h2 id="read-mem">Reading memory</h2>
         <p>The read command maps pages via MDL, so protection flags don't matter. <code>PAGE_GUARD</code>, <code>PAGE_NOACCESS</code> — irrelevant. If the page exists in physical memory, you read it.</p>
 
 <pre>#pragma pack(push, 1)
@@ -209,7 +219,7 @@ bool read_mem(HANDLE device, uint32_t cmd, HANDLE hProcess,
 <pre>float hp = 0.f;
 read_mem(device, READ_CMD, hTarget, health_addr, &amp;hp, sizeof(hp));</pre>
 
-        <h2>Writing memory</h2>
+        <h2 id="write-mem">Writing memory</h2>
         <p>Write goes through the same MDL path. Page protection doesn't stop it, and it writes at the physical level so <code>.text</code> sections marked read-only are fair game too.</p>
 
 <pre>#pragma pack(push, 1)
@@ -242,7 +252,7 @@ bool write_mem(HANDLE device, uint32_t cmd, DWORD pid,
 <pre>float godmode = 99999.f;
 write_mem(device, WRITE_CMD, target_pid, health_addr, &amp;godmode, sizeof(godmode));</pre>
 
-        <h2>Getting module bases</h2>
+        <h2 id="modules">Getting module bases</h2>
         <p>The module enum command attaches to the process and walks its <code>PEB.Ldr</code> — the same linked list Windows uses to track loaded DLLs. Gives you name, base, and size for everything loaded.</p>
 
 <pre>#pragma pack(push, 1)
@@ -277,7 +287,7 @@ uint64_t get_module(HANDLE device, uint32_t cmd,
 <pre>auto base  = get_module(device, ENUM_MOD_CMD, pid, L"game.exe");
 auto unity = get_module(device, ENUM_MOD_CMD, pid, L"UnityPlayer.dll");</pre>
 
-        <h2>Full example</h2>
+        <h2 id="full-example">Full example</h2>
 
 <pre>int main() {
     srand((unsigned)time(nullptr));
@@ -311,14 +321,14 @@ auto unity = get_module(device, ENUM_MOD_CMD, pid, L"UnityPlayer.dll");</pre>
 
         <p>Fill in the <code>_CMD</code> constants with the command IDs you found while reversing. The offsets are on you — use Cheat Engine or IDA on the target game to find them.</p>
 
-        <h2>Why it works on other games</h2>
+        <h2 id="why-it-works">Why it works on other games</h2>
         <p>The driver doesn't care what PID you pass in. No allowlist, no checks. <code>PsLookupProcessByProcessId</code> takes whatever you give it and the handle comes back from kernel mode with <code>ObOpenObjectByPointer</code>, which skips all OB callbacks system-wide. EAC and BattleEye both register callbacks to strip dangerous access rights from handles opened on their game processes. Those callbacks don't fire when the call comes from kernel mode. You get whatever you asked for.</p>
 
         <p>So if Game A uses XIGNCODE3 and you have it loaded, its driver will happily open <code>PROCESS_ALL_ACCESS</code> into Game B sitting next to it. The anti-cheat becomes the cheat.</p>
 
         <blockquote>"The anti-cheat protecting Game A becomes a tool for cheating in Game B."</blockquote>
 
-        <h2>Quick reference</h2>
+        <h2 id="quick-ref">Quick reference</h2>
         <p>Instead of exact command IDs — find them yourself by looking for these API patterns in the dispatch table handlers:</p>
 
         <ul>
@@ -335,6 +345,9 @@ auto unity = get_module(device, ENUM_MOD_CMD, pid, L"UnityPlayer.dll");</pre>
 
         <p style="font-size:.88rem;color:var(--faint);font-family:var(--mono)">Reversed during 2020–2021. Driver version 10.0.10011.16384, compiled 2018-03-29.</p>
       </div>
+      <div class="post-footer">
+        <a class="back-link" href="../index.html#blog">← back to blog</a>
+      </div>
     </article>
   </div>
 </main>
@@ -342,11 +355,29 @@ auto unity = get_module(device, ENUM_MOD_CMD, pid, L"UnityPlayer.dll");</pre>
 <footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
 
 <script>
+  // progress bar
   const bar = document.getElementById('progress');
   window.addEventListener('scroll', () => {
     const h = document.documentElement.scrollHeight - window.innerHeight;
     bar.style.width = (window.scrollY / h * 100) + '%';
   });
+
+  // copy buttons
+  document.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'copy';
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(pre.textContent.trim()).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+
 </script>
 
 </body>

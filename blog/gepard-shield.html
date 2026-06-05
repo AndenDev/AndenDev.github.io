@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gepard Shield Analysis: KiUserExceptionDispatcher Hook Check — Anden</title>
+<meta name="description" content="How Gepard Shield hooks KiUserExceptionDispatcher to detect debuggers, and how its integrity check works at the byte level.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gepard Shield Analysis: KiUserExceptionDispatcher Hook Check — Anden">
+<meta property="og:description" content="How Gepard Shield hooks KiUserExceptionDispatcher to detect debuggers, and how its integrity check works at the byte level.">
+<meta property="og:url" content="https://johnaldrin.dev/blog/gepard-shield.html">
+<meta property="og:site_name" content="Anden">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Gepard Shield Analysis: KiUserExceptionDispatcher Hook Check">
+<meta name="twitter:description" content="How Gepard Shield hooks KiUserExceptionDispatcher to detect debuggers, and how its integrity check works at the byte level.">
+<link rel="canonical" href="https://johnaldrin.dev/blog/gepard-shield.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="../index.html">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></a>
+    <div class="nav-links">
+      <a href="../index.html#work">work</a>
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#blog">blog</a>
+      <a href="../index.html#contact">contact</a>
+    </div>
+  </div>
+</nav>
+
+<main style="position:relative;z-index:1;padding:60px 0 120px">
+  <div class="wrap">
+    <a class="back-link" href="../index.html#blog">← back</a>
+
+    <article class="article">
+      <div class="post-meta">
+        <span>Reverse Engineering</span><span class="dot">·</span>
+        <span>Anti-Cheat Analysis</span><span class="dot">·</span>
+        <span class="read">6 min read</span>
+      </div>
+      <h1>Gepard Shield Analysis:<br><em>KiUserExceptionDispatcher</em> Hook Check</h1>
+      <p class="dek">Gepard Shield — the anti-cheat used by Ragnarok Online — hooks KiUserExceptionDispatcher to intercept debugger activity, then runs a periodic byte check to verify the hook is still intact. Here's how it works.</p>
+      <div class="byline">
+        <div class="avatar">AN</div>
+        <div>
+          <div class="who">Anden</div>
+          <div class="role">Reverse Engineer</div>
+        </div>
+      </div>
+
+      <div class="abody">
+        <p>When I was looking into Gepard Shield — the anti-cheat running inside Ragnarok Online — one thing caught my attention early: it goes after <code>KiUserExceptionDispatcher</code>. That's a smart target. It's an undocumented function deep in <code>ntdll.dll</code> that Windows calls every time a user-mode exception happens. Breakpoints, single-step traps, access violations — they all flow through it. Debuggers depend on that flow to work. Control that function and you can see a debugger coming before it even gets a chance to respond.</p>
+
+        <p>Gepard installs its hook shortly after login. It patches the very start of <code>KiUserExceptionDispatcher</code> — the first five bytes — replacing the normal function prologue with a jump into its own code.</p>
+
+        <p>Before the patch, the bytes look like this:</p>
+
+<pre>8B FF 55 8B EC</pre>
+
+        <p>Standard x86 prologue, nothing unusual. After Gepard hooks it:</p>
+
+<pre>E9 XX XX XX XX</pre>
+
+        <p><code>E9</code> is a near jump. The four bytes that follow are a relative offset telling the CPU where to land — straight into Gepard's exception handler. From that point on, every exception that fires in the process hits Gepard's code first.</p>
+
+        <h2 id="integrity-check">Protecting the Hook</h2>
+        <p>Installing the hook is one thing. Keeping it there is another. Anyone trying to bypass this anti-debugger would just restore those five bytes back to the original prologue. Gepard knows this, so it runs a periodic check to verify the hook hasn't been touched.</p>
+
+        <p>The check comes down to a single instruction:</p>
+
+<pre>movzx dx, byte ptr [ecx]</pre>
+
+        <p>Before this runs, Gepard loads <code>ECX</code> with the address of a specific byte inside its installed hook — one of the bytes that would be overwritten if someone patched it back. Then this instruction reads that byte and drops it into <code>DX</code>. That's it. One byte, one register.</p>
+
+        <p>What happens next is the actual detection: Gepard compares that value against what it knows the byte should be. If they match, the hook is intact and the check passes quietly. If they don't — meaning something changed that byte — Gepard knows the hook was removed or overwritten, and it treats that as a tamper event.</p>
+
+        <h2 id="result">What Happens on Detection</h2>
+        <p>The response is immediate. Gepard pops a message box saying tampering was detected and shuts the game client down. No grace period, no second chance.</p>
+
+        <h2 id="bypass">Bypassing It</h2>
+        <p>The check itself isn't hard to get around once you understand what it's looking for — you just need to make sure that byte stays at the expected value while you do whatever you're doing. But that's only one layer. Gepard has other anti-debug tricks on top of this, so removing this particular check doesn't hand you a working debugger session. You still need to deal with syscall-based detection and the usual catalogue of anti-debug techniques before you're actually in a position to do anything useful.</p>
+
+        <div class="divider">/ / /</div>
+      </div>
+
+      <div class="post-footer">
+        <a class="back-link" href="../index.html#blog">← back to blog</a>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  });
+
+  document.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'copy';
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(pre.textContent.trim()).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projects — Anden</title>
+<meta name="description" content="All projects by Anden — reverse engineering research, full-stack .NET systems, and company work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="index.html">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></a>
+    <div class="nav-links">
+      <a href="index.html#work">work</a>
+      <a href="index.html#about">about</a>
+      <a href="index.html#blog">blog</a>
+      <a href="index.html#contact">contact</a>
+    </div>
+  </div>
+</nav>
+
+<main style="position:relative;z-index:1;padding:60px 0 120px">
+  <div class="wrap">
+    <a class="back-link" href="index.html">← back</a>
+
+    <div class="sec-head" style="margin-top:0">
+      <span class="sec-num">all</span>
+      <h2 class="sec-title"><b>fn</b>projects</h2>
+    </div>
+
+    <div class="work">
+      <a class="card" href="blog/xhunter1.html">
+        <span class="addr">0x0040</span>
+        <div class="card-tag amber">Reverse Engineering · Research</div>
+        <h3 class="card-title">Abusing xhunter1.sys</h3>
+        <p class="card-desc">Reversed XIGNCODE3's kernel driver during the pandemic and found commands to open handles, read and write memory on any process — then used it against games protected by EAC and BattleEye without getting banned.</p>
+        <div class="stack-line">
+          <span class="chip">IDA Pro</span>
+          <span class="chip">Windows Kernel</span>
+          <span class="chip">C++</span>
+          <span class="chip">BYOVD</span>
+        </div>
+      </a>
+      <a class="card" href="blog/licensing-platform.html">
+        <span class="addr">0x0080</span>
+        <div class="card-tag">Full-Stack · .NET</div>
+        <h3 class="card-title">Licensing &amp; Auth Platform</h3>
+        <p class="card-desc">Multi-tenant licensing system with HWID binding, JWT auth, a reseller tier, and a React admin dashboard — plus a Discord bot that syncs roles and handles license resets via slash commands.</p>
+        <div class="stack-line">
+          <span class="chip">ASP.NET Core 8</span>
+          <span class="chip">React + TypeScript</span>
+          <span class="chip">Discord.NET</span>
+          <span class="chip">EF Core / SQL</span>
+          <span class="chip">C++</span>
+        </div>
+      </a>
+      <a class="card" href="blog/machine-interface.html">
+        <span class="addr">0x00C0</span>
+        <div class="card-tag">Full-Stack · .NET · Healthcare</div>
+        <h3 class="card-title">Lab Analyzer Integration API</h3>
+        <p class="card-desc">ASP.NET Core 8 middleware that connects clinical laboratory analyzers to a LIS — parsing ASTM and HL7 protocols across machines from Roche, Sysmex, and VITEK 2, with legacy LIS database support.</p>
+        <div class="stack-line">
+          <span class="chip">ASP.NET Core 8</span>
+          <span class="chip">ASTM · HL7</span>
+          <span class="chip">Hangfire</span>
+          <span class="chip">EF Core / SQL</span>
+          <span class="chip">WinForms</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</main>
+
+<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  });
+</script>
+
+</body>
+</html>
