@@ -6,7 +6,8 @@
 <title>Anden — Reverse Engineer &amp; .NET Developer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="description" content="Anden (John Aldrin Castillo) — reverse engineer and .NET developer from Batangas, Philippines. Usermode RE, anti-cheat research, and ASP.NET Core web APIs.">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,40 +16,43 @@
 
 <nav>
   <div class="nav-inner">
-    <div class="logo">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></div>
+    <a class="logo" href="#top">&lt;<span class="br">re</span>&gt;anden<span class="cur">_</span></a>
     <div class="nav-links">
       <a href="#work">work</a>
       <a href="#about">about</a>
       <a href="#blog">blog</a>
       <a href="#contact">contact</a>
     </div>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span>
+    </button>
   </div>
 </nav>
 
-<!-- ===================== HERO ===================== -->
-<header>
-  <div class="wrap">
-    <div class="term-card fade d1">
-      <div class="term-bar">
-        <i></i><i></i><i></i>
-        <span class="path">~/anden — bash — 80×24</span>
-      </div>
-      <div class="term-body">
-        <div class="prompt">$ <b>whoami</b> --role</div>
-        <h1 class="hero-title">Reverse engineer.<br><em>.NET</em> developer.</h1>
-        <p class="hero-sub">I reverse games and anti-cheats in my free time — mostly usermode, mostly just to understand how things work. At work I build web APIs in <code>C#</code> and <code>.NET</code>.</p>
-        <div class="meta-row">
-          <div>CURRENTLY WORKING AT<b>ABE Data Solutions</b></div>
-          <div>LOCATION<b>Batangas, PH</b></div>
-          <div>FOCUS<b>RE · .NET API</b></div>
-        </div>
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div class="hero-lead fade d1">
+      <p class="kicker"><span class="dot-live"></span>Currently working at ABE Data Solutions</p>
+      <h1 class="hero-title">Reverse&nbsp;engineer<br><span class="amp">&amp;</span> <em>.NET</em> developer.</h1>
+      <p class="hero-sub">I take software apart to understand how it works — games, anti-cheats, kernel drivers — mostly usermode, in my own time. By day I build web APIs in <code>C#</code> and <code>.NET</code>.</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#work">View work</a>
+        <a class="btn ghost" href="#contact">Get in touch</a>
       </div>
     </div>
+    <aside class="hero-spec fade d2" aria-label="Profile">
+      <div class="spec-head"><span>readout</span><b>online</b></div>
+      <dl>
+        <div><dt>Name</dt><dd><b>John Aldrin Castillo</b></dd></div>
+        <div><dt>Alias</dt><dd>Anden</dd></div>
+        <div><dt>Focus</dt><dd>RE&nbsp;·&nbsp;.NET&nbsp;API</dd></div>
+        <div><dt>Location</dt><dd>Batangas,&nbsp;PH</dd></div>
+        <div><dt>Timezone</dt><dd>GMT+8</dd></div>
+      </dl>
+    </aside>
   </div>
 </header>
 
-
-<!-- ===================== WORK ===================== -->
 <section id="work">
   <div class="wrap">
     <div class="sec-head">
@@ -56,7 +60,7 @@
       <h2 class="sec-title"><b>fn</b>projects</h2>
     </div>
     <div class="work">
-      <a class="card" href="blog/xhunter1.html">
+      <a class="card amber-edge" href="blog/xhunter1.html">
         <span class="addr">0x0040</span>
         <div class="card-tag amber">Reverse Engineering · Research</div>
         <h3 class="card-title">Abusing xhunter1.sys</h3>
@@ -101,7 +105,6 @@
   </div>
 </section>
 
-<!-- ===================== ABOUT ===================== -->
 <section id="about">
   <div class="wrap">
     <div class="sec-head">
@@ -116,27 +119,27 @@
         <p>After I graduated I started getting into web development. Found out .NET could handle that too so I stuck with it — picked up ASP.NET Core, REST APIs, databases, the whole stack. That turned into my day job.</p>
       </div>
       <div class="stack">
-        <h4>// languages</h4>
+        <h4>languages</h4>
         <ul>
           <li>C / C++ <span>NATIVE</span></li>
           <li>C# <span>LANG</span></li>
           <li>Assembly (x86/x64) <span>ASM</span></li>
         </ul>
-        <h4>// reverse engineering</h4>
+        <h4>reverse engineering</h4>
         <ul>
           <li>IDA Pro / Ghidra <span>DISASM</span></li>
           <li>x64dbg / OllyDbg <span>DBG</span></li>
           <li>Cheat Engine <span>SCAN</span></li>
           <li>Windows Internals <span>OS</span></li>
         </ul>
-        <h4>// web &amp; dev</h4>
+        <h4>web &amp; dev</h4>
         <ul>
           <li>ASP.NET Core <span>API</span></li>
           <li>Bootstrap / jQuery <span>UI</span></li>
           <li>EF Core / SQL <span>DATA</span></li>
           <li>P/Invoke &amp; interop <span>FFI</span></li>
         </ul>
-        <h4>// scripting</h4>
+        <h4>scripting</h4>
         <ul>
           <li>JavaScript <span>FAMILIAR</span></li>
           <li>Python <span>FAMILIAR</span></li>
@@ -148,7 +151,6 @@
   </div>
 </section>
 
-<!-- ===================== JOURNAL ===================== -->
 <section id="blog">
   <div class="wrap">
     <div class="sec-head">
@@ -156,7 +158,6 @@
       <h2 class="sec-title"><b>fn</b>blog</h2>
     </div>
 
-    <!-- recent posts list -->
     <div class="posts" style="margin-bottom:64px">
       <a class="post-row" href="blog/xhunter1.html">
         <div>
@@ -181,7 +182,6 @@
   </div>
 </section>
 
-<!-- ===================== CONTACT ===================== -->
 <section id="contact" class="contact">
   <div class="wrap">
     <div class="eyebrow">$ ./contact --me</div>
@@ -194,15 +194,9 @@
   </div>
 </section>
 
-<footer>// © 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
+<footer>© 2025 John Aldrin M. Castillo (Anden) — Batangas, Philippines</footer>
 
-<script>
-  const bar = document.getElementById('progress');
-  window.addEventListener('scroll', () => {
-    const h = document.documentElement.scrollHeight - window.innerHeight;
-    bar.style.width = (window.scrollY / h * 100) + '%';
-  });
-</script>
+<script src="main.js"></script>
 
 </body>
 </html>
